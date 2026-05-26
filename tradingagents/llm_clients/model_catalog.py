@@ -80,12 +80,14 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("GPT-5.4 Nano - Cheapest, high-volume tasks", "gpt-5.4-nano"),
             ("GPT-5.5 - Latest frontier, 1M context", "gpt-5.5"),
             ("GPT-4.1 - Smartest non-reasoning model", "gpt-4.1"),
+            ("MiniMax M2.7 (NVIDIA NIM, OpenAI-compatible)", "minimaxai/minimax-m2.7"),
         ],
         "deep": [
             ("GPT-5.5 - Latest frontier, 1M context", "gpt-5.5"),
             ("GPT-5.4 - Previous-gen frontier, 1M context, cost-effective", "gpt-5.4"),
             ("GPT-5.2 - Strong reasoning, cost-effective", "gpt-5.2"),
             ("GPT-5.5 Pro - Most capable, expensive ($30/$180 per 1M tokens)", "gpt-5.5-pro"),
+            ("MiniMax M2.7 (NVIDIA NIM, OpenAI-compatible)", "minimaxai/minimax-m2.7"),
         ],
     },
     "anthropic": {
@@ -113,6 +115,7 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("Gemini 3 Flash - Next-gen fast (preview)", "gemini-3-flash-preview"),
             ("Gemini 2.5 Pro - Stable pro model", "gemini-2.5-pro"),
             ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
+            ("Gemini 3.1 Flash Lite - Most cost-efficient (GA)", "gemini-3.1-flash-lite"), # +: Hua Congyi: For debugging.
         ],
     },
     "xai": {

@@ -74,18 +74,43 @@ def load_ohlcv(symbol: str, curr_date: str) -> pd.DataFrame:
     if os.path.exists(data_file):
         data = pd.read_csv(data_file, on_bad_lines="skip", encoding="utf-8")
     else:
-        data = yf_retry(lambda: yf.download(
-            symbol,
-            start=start_str,
-            end=end_str,
-            multi_level_index=False,
-            progress=False,
-            auto_adjust=True,
-        ))
+        try:
+            data = yf_retry(lambda: yf.download(
+                symbol,
+                start=start_str,
+                end=end_str,
+                multi_level_index=False,
+                progress=False,
+                auto_adjust=True,
+            ))
+        except TypeError:
+            # Older yfinance versions don't support multi_level_index=False
+            data = yf_retry(lambda: yf.download(
+                symbol,
+                start=start_str,
+                end=end_str,
+                progress=False,
+                auto_adjust=True,
+            ))
+            
+        # Flatten MultiIndex columns if present (yfinance 0.2.40+ returns MultiIndex by default)
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = [col[0] for col in data.columns]
+            
         data = data.reset_index()
+        
+        # Flatten index again if reset_index created a tuple like ('Date', '')
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = [col[0] for col in data.columns]
+            
         data.to_csv(data_file, index=False, encoding="utf-8")
 
-    data = _clean_dataframe(data)
+    try:
+        data = _clean_dataframe(data)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error cleaning dataframe: {e}")
+        raise
 
     # Filter to curr_date to prevent look-ahead bias in backtesting
     data = data[data["Date"] <= curr_date_dt]
@@ -124,10 +149,12 @@ class StockstatsUtils:
         curr_date_str = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
 
         df[indicator]  # trigger stockstats to calculate the indicator
-        matching_rows = df[df["Date"].str.startswith(curr_date_str)]
 
-        if not matching_rows.empty:
-            indicator_value = matching_rows[indicator].values[0]
+        # Instead of exact match, just get the last available row since load_ohlcv already filtered future dates
+        if not df.empty:
+            # Get the very last row which represents the latest available data up to curr_date
+            latest_row = df.iloc[-1]
+            indicator_value = latest_row[indicator]
             return indicator_value
         else:
             return "N/A: Not a trading day (weekend or holiday)"

@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [Unreleased] — study fork (huacongyi)
+
+### Added
+
+- Study provider configs: `gemini_config`, `minimax_cn_config`, `minimax_nvidia_config`
+- NVIDIA NIM OpenAI-compatible backend support (`NVIDIA_API_KEY` fallback)
+- LangGraph smoke scripts for Gemini, MiniMax CN, and NVIDIA MiniMax
+- `test_openai_third_party_backend.py`
+
+### Changed
+
+- MiniMax `reasoning_split` sent via `extra_body`
+- yfinance MultiIndex / older-version compatibility in `stockstats_utils`
+- Trader schema: single numeric `entry_price` / `stop_loss`
+- Model catalog: `minimaxai/minimax-m2.7` (OpenAI), `gemini-3.1-flash-lite` (Google)
+
+### Fixed
+
+- Technical indicator lookup uses latest row up to `curr_date`
+
 ## [0.2.5] — 2026-05-11
 
 ### Added

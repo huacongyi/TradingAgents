@@ -147,6 +147,15 @@ class TestTraderAgent:
         prompt = captured["prompt"]
         assert any("Proposed Investment Plan" in m["content"] for m in prompt)
 
+    def test_prompt_requires_single_numeric_price_levels(self):
+        captured = {}
+        llm = _structured_trader_llm(captured)
+        trader = create_trader(llm)
+        trader(_make_trader_state())
+        system_message = captured["prompt"][0]["content"]
+        assert "one numeric price each" in system_message
+        assert "never a range" in system_message
+
     def test_falls_back_to_freetext_when_structured_unavailable(self):
         plain_response = (
             "**Action**: Sell\n\nGuidance cut hits margins.\n\n"

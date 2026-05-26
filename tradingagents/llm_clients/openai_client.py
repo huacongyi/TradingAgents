@@ -126,7 +126,12 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
 
     def _get_request_payload(self, input_, *, stop=None, **kwargs):
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        payload.setdefault("reasoning_split", True)
+        extra_body = dict(payload.get("extra_body") or {})
+        if "reasoning_split" in payload:
+            extra_body.setdefault("reasoning_split", payload.pop("reasoning_split"))
+        else:
+            extra_body.setdefault("reasoning_split", True)
+        payload["extra_body"] = extra_body
         return payload
 
 
@@ -221,10 +226,28 @@ class OpenAIClient(BaseLLMClient):
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
 
-        # Native OpenAI: use Responses API for consistent behavior across
-        # all model families. Third-party providers use Chat Completions.
+        # Native OpenAI (no explicit base_url): use Responses API. Any
+        # explicit backend_url (NVIDIA NIM, corporate proxy, etc.) is
+        # OpenAI-compatible chat completions only — Responses API is not
+        # supported there. Also pass api_key explicitly: the generic
+        # ``elif self.base_url`` branch above does not attach keys (unlike
+        # entries in ``_PROVIDER_BASE_URL``), so without this ChatOpenAI
+        # fails when OPENAI_API_KEY is not already in the process env.
         if self.provider == "openai":
-            llm_kwargs["use_responses_api"] = True
+            if "api_key" not in llm_kwargs:
+                api_key = os.environ.get("OPENAI_API_KEY")
+                base_lower = (self.base_url or "").lower()
+                if not api_key and "nvidia" in base_lower:
+                    api_key = os.environ.get("NVIDIA_API_KEY")
+                if api_key:
+                    llm_kwargs["api_key"] = api_key
+                elif self.base_url:
+                    raise ValueError(
+                        "API key for OpenAI-compatible backend is not set. "
+                        "Set OPENAI_API_KEY (e.g. your NVIDIA API key for NIM), "
+                        "or set NVIDIA_API_KEY."
+                    )
+            llm_kwargs["use_responses_api"] = not bool(self.base_url)
 
         # Provider-specific quirks live in their own subclasses so the
         # base NormalizedChatOpenAI stays free of provider branches.

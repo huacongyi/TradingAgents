@@ -106,7 +106,7 @@ _BY_ID: dict[str, ModelCapabilities] = {
 _BY_PATTERN: list[tuple[re.Pattern[str], ModelCapabilities]] = [
     (re.compile(r"^deepseek-v\d"), _DEEPSEEK_THINKING),
     (re.compile(r"^deepseek-reasoner"), _DEEPSEEK_THINKING),
-    (re.compile(r"^MiniMax-M\d"), _MINIMAX_THINKING),
+    (re.compile(r"^(minimaxai/)?minimax-m\d", re.IGNORECASE), _MINIMAX_THINKING),
 ]
 
 
