@@ -3,7 +3,7 @@
 The framework's primary artifact is still prose: each agent's natural-language
 reasoning is what users read in the saved markdown reports and what the
 downstream agents read as context.  Structured output is layered onto the
-three decision-making agents (Research Manager, Trader, Portfolio Manager)
+three decision-making agents (Research Manager, Trader, Asset Manager)
 so that:
 
 - Their outputs follow consistent section headers across runs and providers
@@ -29,8 +29,8 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 
-class PortfolioRating(str, Enum):
-    """5-tier rating used by the Research Manager and Portfolio Manager."""
+class AssetRating(str, Enum):
+    """5-tier rating used by the Research Manager and Asset Manager."""
 
     BUY = "Buy"
     OVERWEIGHT = "Overweight"
@@ -45,7 +45,7 @@ class TraderAction(str, Enum):
     The Trader's job is to translate the Research Manager's investment plan
     into a concrete transaction proposal: should the desk execute a Buy, a
     Sell, or sit on Hold this round.  Position sizing and the nuanced
-    Overweight / Underweight calls happen later at the Portfolio Manager.
+    Overweight / Underweight calls happen later at the Asset Manager.
     """
 
     BUY = "Buy"
@@ -67,7 +67,7 @@ class ResearchPlan(BaseModel):
     instructions the trader can execute against.
     """
 
-    recommendation: PortfolioRating = Field(
+    recommendation: AssetRating = Field(
         description=(
             "The investment recommendation. Exactly one of Buy / Overweight / "
             "Hold / Underweight / Sell. Reserve Hold for situations where the "
@@ -142,7 +142,7 @@ class TraderProposal(BaseModel):
     )
     position_sizing: Optional[str] = Field(
         default=None,
-        description="Optional sizing guidance, e.g. '5% of portfolio'.",
+        description="Optional sizing guidance, e.g. '5% allocation'.",
     )
 
 
@@ -172,12 +172,12 @@ def render_trader_proposal(proposal: TraderProposal) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Portfolio Manager
+# Asset Manager
 # ---------------------------------------------------------------------------
 
 
-class PortfolioDecision(BaseModel):
-    """Structured output produced by the Portfolio Manager.
+class AssetDecision(BaseModel):
+    """Structured output produced by the Asset Manager.
 
     The model fills every field as part of its primary LLM call; no separate
     extraction pass is required. Field descriptions double as the model's
@@ -185,7 +185,7 @@ class PortfolioDecision(BaseModel):
     the rating-scale guidance.
     """
 
-    rating: PortfolioRating = Field(
+    rating: AssetRating = Field(
         description=(
             "The final position rating. Exactly one of Buy / Overweight / Hold / "
             "Underweight / Sell, picked based on the analysts' debate."
@@ -214,8 +214,8 @@ class PortfolioDecision(BaseModel):
     )
 
 
-def render_pm_decision(decision: PortfolioDecision) -> str:
-    """Render a PortfolioDecision back to the markdown shape the rest of the system expects.
+def render_asset_decision(decision: AssetDecision) -> str:
+    """Render an AssetDecision back to the markdown shape the rest of the system expects.
 
     Memory log, CLI display, and saved report files all read this markdown,
     so the rendered output preserves the exact section headers (``**Rating**``,

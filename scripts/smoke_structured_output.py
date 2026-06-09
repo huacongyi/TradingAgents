@@ -1,6 +1,6 @@
 """End-to-end smoke for structured-output agents against a real LLM provider.
 
-Runs the three decision-making agents (Research Manager, Trader, Portfolio
+Runs the three decision-making agents (Research Manager, Trader, Asset
 Manager) directly with their structured-output bindings and prints the
 typed Pydantic instance + the rendered markdown for each.  Use this to
 verify a provider's native structured-output mode (json_schema for
@@ -24,7 +24,7 @@ import argparse
 import os
 import sys
 
-from tradingagents.agents.managers.portfolio_manager import create_portfolio_manager
+from tradingagents.agents.managers.asset_manager import create_asset_manager
 from tradingagents.agents.managers.research_manager import create_research_manager
 from tradingagents.agents.trader.trader import create_trader
 from tradingagents.graph.signal_processing import SignalProcessor
@@ -75,7 +75,7 @@ def _make_trader_state(investment_plan: str):
     }
 
 
-def _make_pm_state(investment_plan: str, trader_plan: str):
+def _make_am_state(investment_plan: str, trader_plan: str):
     return {
         "company_of_interest": "NVDA",
         "past_context": "",
@@ -137,11 +137,11 @@ def main() -> int:
     trader_plan = trader_result["trader_investment_plan"]
     _print_section("[2] Trader — trader_investment_plan", trader_plan)
 
-    # 3) Portfolio Manager (consumes both)
-    pm = create_portfolio_manager(deep_llm)
-    pm_result = pm(_make_pm_state(investment_plan, trader_plan))
-    final_decision = pm_result["final_trade_decision"]
-    _print_section("[3] Portfolio Manager — final_trade_decision", final_decision)
+    # 3) Asset Manager (consumes both)
+    am = create_asset_manager(deep_llm)
+    am_result = am(_make_am_state(investment_plan, trader_plan))
+    final_decision = am_result["final_trade_decision"]
+    _print_section("[3] Asset Manager — final_trade_decision", final_decision)
 
     # 4) SignalProcessor extracts the rating with zero LLM calls.
     sp = SignalProcessor()
@@ -154,7 +154,7 @@ def main() -> int:
     checks = [
         ("Research Manager", investment_plan, ["**Recommendation**:"]),
         ("Trader",           trader_plan,     ["**Action**:", "FINAL TRANSACTION PROPOSAL:"]),
-        ("Portfolio Manager", final_decision, ["**Rating**:", "**Executive Summary**:", "**Investment Thesis**:"]),
+        ("Asset Manager", final_decision, ["**Rating**:", "**Executive Summary**:", "**Investment Thesis**:"]),
     ]
     print("\n" + "=" * 70 + "\nStructure checks\n" + "=" * 70)
     failures = 0

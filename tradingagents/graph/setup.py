@@ -88,7 +88,7 @@ class GraphSetup:
         aggressive_analyst = create_aggressive_debator(self.quick_thinking_llm)
         neutral_analyst = create_neutral_debator(self.quick_thinking_llm)
         conservative_analyst = create_conservative_debator(self.quick_thinking_llm)
-        portfolio_manager_node = create_portfolio_manager(self.deep_thinking_llm)
+        asset_manager_node = create_asset_manager(self.deep_thinking_llm)
 
         # Create workflow
         workflow = StateGraph(AgentState)
@@ -109,7 +109,7 @@ class GraphSetup:
         workflow.add_node("Aggressive Analyst", aggressive_analyst)
         workflow.add_node("Neutral Analyst", neutral_analyst)
         workflow.add_node("Conservative Analyst", conservative_analyst)
-        workflow.add_node("Portfolio Manager", portfolio_manager_node)
+        workflow.add_node("Asset Manager", asset_manager_node)
 
         # Define edges
         # Start with the first analyst
@@ -161,7 +161,7 @@ class GraphSetup:
             self.conditional_logic.should_continue_risk_analysis,
             {
                 "Conservative Analyst": "Conservative Analyst",
-                "Portfolio Manager": "Portfolio Manager",
+                "Asset Manager": "Asset Manager",
             },
         )
         workflow.add_conditional_edges(
@@ -169,7 +169,7 @@ class GraphSetup:
             self.conditional_logic.should_continue_risk_analysis,
             {
                 "Neutral Analyst": "Neutral Analyst",
-                "Portfolio Manager": "Portfolio Manager",
+                "Asset Manager": "Asset Manager",
             },
         )
         workflow.add_conditional_edges(
@@ -177,10 +177,10 @@ class GraphSetup:
             self.conditional_logic.should_continue_risk_analysis,
             {
                 "Aggressive Analyst": "Aggressive Analyst",
-                "Portfolio Manager": "Portfolio Manager",
+                "Asset Manager": "Asset Manager",
             },
         )
 
-        workflow.add_edge("Portfolio Manager", END)
+        workflow.add_edge("Asset Manager", END)
 
         return workflow

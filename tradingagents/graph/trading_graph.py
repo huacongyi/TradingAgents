@@ -333,7 +333,7 @@ class TradingAgentsGraph:
 
     def _run_graph(self, company_name, trade_date):
         """Execute the graph and write the resulting state to disk and memory log."""
-        # Initialize state — inject memory log context for PM.
+        # Initialize state — inject memory log context for AM.
         past_context = self.memory_log.get_past_context(company_name)
         init_agent_state = self.propagator.create_initial_state(
             company_name, trade_date, past_context=past_context
@@ -358,7 +358,7 @@ class TradingAgentsGraph:
                     self.node_timing.record_update(node_name)
                     if not self.debug or not isinstance(node_delta, dict):
                         continue
-                    if node_name == "Portfolio Manager":
+                    if node_name == "Asset Manager":
                         decision = node_delta.get("final_trade_decision")
                         if decision:
                             print("================================== Ai Message ==================================")

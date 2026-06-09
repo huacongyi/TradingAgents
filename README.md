@@ -46,7 +46,7 @@ To sync with upstream later: `git fetch upstream && git merge upstream/main`.
 
 ## TradingAgents Framework
 
-TradingAgents is a multi-agent trading framework that mirrors the dynamics of real-world trading firms. Specialized LLM-powered agents — fundamental analysts, sentiment experts, technical analysts, researchers, trader, and risk/portfolio managers — collaboratively evaluate market conditions and inform trading decisions through structured debate.
+TradingAgents is a multi-agent trading framework that mirrors the dynamics of real-world trading firms. Specialized LLM-powered agents — fundamental analysts, sentiment experts, technical analysts, researchers, trader, and risk/asset managers — collaboratively evaluate market conditions and inform trading decisions through structured debate.
 
 <p align="center">
   <img src="assets/schema.png" style="width: 100%; height: auto;">
@@ -69,9 +69,9 @@ Bullish and bearish researchers debate analyst findings to balance upside and ri
 
 Turns research into a concrete buy/sell/hold proposal with optional price levels.
 
-### Risk Management and Portfolio Manager
+### Risk Management and Asset Manager
 
-Risk debaters stress-test the proposal; the Portfolio Manager approves or rejects the trade.
+Risk debaters stress-test the proposal; the Asset Manager approves or rejects the trade.
 
 ## Installation and CLI
 

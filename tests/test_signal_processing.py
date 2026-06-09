@@ -1,6 +1,6 @@
 """Tests for the shared rating heuristic and the SignalProcessor adapter.
 
-The Portfolio Manager produces a typed PortfolioDecision via structured
+The Asset Manager produces a typed AssetDecision via structured
 output and renders it to markdown that always contains a ``**Rating**: X``
 header.  The deterministic heuristic in ``tradingagents.agents.utils.rating``
 is therefore sufficient to extract the rating downstream — no second LLM
@@ -34,11 +34,11 @@ class TestParseRating:
     def test_explicit_label_with_markdown_bold_label(self):
         assert parse_rating("**Rating**: Underweight\nTrim exposure.") == "Underweight"
 
-    def test_rendered_pm_markdown_shape(self):
-        # The exact shape produced by render_pm_decision must always parse.
+    def test_rendered_am_markdown_shape(self):
+        # The exact shape produced by render_asset_decision must always parse.
         text = (
             "**Rating**: Buy\n\n"
-            "**Executive Summary**: Enter at $189-192, 6% portfolio cap.\n\n"
+            "**Executive Summary**: Enter at $189-192, 6% position cap.\n\n"
             "**Investment Thesis**: AI capex cycle intact; institutional flows constructive."
         )
         assert parse_rating(text) == "Buy"
@@ -69,14 +69,14 @@ class TestParseRating:
 
 @pytest.mark.unit
 class TestSignalProcessor:
-    def test_returns_rating_from_pm_markdown(self):
+    def test_returns_rating_from_am_markdown(self):
         sp = SignalProcessor()
         md = "**Rating**: Overweight\n\n**Executive Summary**: Build gradually."
         assert sp.process_signal(md) == "Overweight"
 
     def test_makes_no_llm_calls(self):
         """SignalProcessor must not invoke the LLM it was constructed with —
-        the rating is parseable from the rendered PM markdown directly."""
+        the rating is parseable from the rendered AM markdown directly."""
         from unittest.mock import MagicMock
 
         llm = MagicMock()

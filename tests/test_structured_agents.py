@@ -1,7 +1,7 @@
 """Tests for structured-output agents (Trader and Research Manager).
 
-The Portfolio Manager has its own coverage in tests/test_memory_log.py
-(which exercises the full memory-log → PM injection cycle).  This file
+The Asset Manager has its own coverage in tests/test_memory_log.py
+(which exercises the full memory-log → AM injection cycle).  This file
 covers the parallel schemas, render functions, and graceful-fallback
 behavior we added for the Trader and Research Manager so all three
 decision-making agents share the same shape.
@@ -13,7 +13,7 @@ import pytest
 
 from tradingagents.agents.managers.research_manager import create_research_manager
 from tradingagents.agents.schemas import (
-    PortfolioRating,
+    AssetRating,
     ResearchPlan,
     TraderAction,
     TraderProposal,
@@ -45,13 +45,13 @@ class TestRenderTraderProposal:
             reasoning="Strong technicals + fundamentals.",
             entry_price=189.5,
             stop_loss=178.0,
-            position_sizing="6% of portfolio",
+            position_sizing="6% allocation",
         )
         md = render_trader_proposal(p)
         assert "**Action**: Buy" in md
         assert "**Entry Price**: 189.5" in md
         assert "**Stop Loss**: 178.0" in md
-        assert "**Position Sizing**: 6% of portfolio" in md
+        assert "**Position Sizing**: 6% allocation" in md
         assert "FINAL TRANSACTION PROPOSAL: **BUY**" in md
 
     def test_optional_fields_omitted_when_absent(self):
@@ -67,7 +67,7 @@ class TestRenderTraderProposal:
 class TestRenderResearchPlan:
     def test_required_fields(self):
         p = ResearchPlan(
-            recommendation=PortfolioRating.OVERWEIGHT,
+            recommendation=AssetRating.OVERWEIGHT,
             rationale="Bull case carried; tailwinds intact.",
             strategic_actions="Build position over two weeks; cap at 5%.",
         )
@@ -77,7 +77,7 @@ class TestRenderResearchPlan:
         assert "**Strategic Actions**: Build position" in md
 
     def test_all_5_tier_ratings_render(self):
-        for rating in PortfolioRating:
+        for rating in AssetRating:
             p = ResearchPlan(
                 recommendation=rating,
                 rationale="r",
@@ -126,7 +126,7 @@ class TestTraderAgent:
             reasoning="AI capex cycle intact; institutional flows constructive.",
             entry_price=189.5,
             stop_loss=178.0,
-            position_sizing="6% of portfolio",
+            position_sizing="6% allocation",
         )
         llm = _structured_trader_llm(captured, proposal)
         trader = create_trader(llm)
@@ -191,7 +191,7 @@ def _make_rm_state():
 def _structured_rm_llm(captured: dict, plan: ResearchPlan | None = None):
     if plan is None:
         plan = ResearchPlan(
-            recommendation=PortfolioRating.HOLD,
+            recommendation=AssetRating.HOLD,
             rationale="Balanced view across both sides.",
             strategic_actions="Hold current position; reassess after earnings.",
         )
@@ -209,7 +209,7 @@ class TestResearchManagerAgent:
     def test_structured_path_produces_rendered_markdown(self):
         captured = {}
         plan = ResearchPlan(
-            recommendation=PortfolioRating.OVERWEIGHT,
+            recommendation=AssetRating.OVERWEIGHT,
             rationale="Bull case is stronger; AI tailwind intact.",
             strategic_actions="Build position gradually over two weeks.",
         )

@@ -1,7 +1,7 @@
-"""Portfolio Manager: synthesises the risk-analyst debate into the final decision.
+"""Asset Manager: synthesises the risk-analyst debate into the final decision.
 
 Uses LangChain's ``with_structured_output`` so the LLM produces a typed
-``PortfolioDecision`` directly, in a single call.  The result is rendered
+``AssetDecision`` directly, in a single call.  The result is rendered
 back to markdown for storage in ``final_trade_decision`` so memory log,
 CLI display, and saved reports continue to consume the same shape they do
 today.  When a provider does not expose structured output, the agent falls
@@ -10,7 +10,7 @@ back gracefully to free-text generation.
 
 from __future__ import annotations
 
-from tradingagents.agents.schemas import PortfolioDecision, render_pm_decision
+from tradingagents.agents.schemas import AssetDecision, render_asset_decision
 from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
@@ -21,10 +21,10 @@ from tradingagents.agents.utils.structured import (
 )
 
 
-def create_portfolio_manager(llm):
-    structured_llm = bind_structured(llm, PortfolioDecision, "Portfolio Manager")
+def create_asset_manager(llm):
+    structured_llm = bind_structured(llm, AssetDecision, "Asset Manager")
 
-    def portfolio_manager_node(state) -> dict:
+    def asset_manager_node(state) -> dict:
         instrument_context = build_instrument_context(state["company_of_interest"])
 
         history = state["risk_debate_state"]["history"]
@@ -39,7 +39,7 @@ def create_portfolio_manager(llm):
             else ""
         )
 
-        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision.
+        prompt = f"""As the Asset Manager, synthesize the risk analysts' debate and deliver the final trading decision.
 
 {instrument_context}
 
@@ -67,8 +67,8 @@ Be decisive and ground every conclusion in specific evidence from the analysts.{
             structured_llm,
             llm,
             prompt,
-            render_pm_decision,
-            "Portfolio Manager",
+            render_asset_decision,
+            "Asset Manager",
         )
 
         new_risk_debate_state = {
@@ -89,4 +89,4 @@ Be decisive and ground every conclusion in specific evidence from the analysts.{
             "final_trade_decision": final_trade_decision,
         }
 
-    return portfolio_manager_node
+    return asset_manager_node

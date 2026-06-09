@@ -1,19 +1,19 @@
-"""Tests for TradingMemoryLog — storage, deferred reflection, PM injection, legacy removal."""
+"""Tests for TradingMemoryLog — storage, deferred reflection, AM injection, legacy removal."""
 
 import pytest
 import pandas as pd
 from unittest.mock import MagicMock, patch
 
 from tradingagents.agents.utils.memory import TradingMemoryLog
-from tradingagents.agents.schemas import PortfolioDecision, PortfolioRating
+from tradingagents.agents.schemas import AssetDecision, AssetRating
 from tradingagents.graph.reflection import Reflector
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.graph.propagation import Propagator
-from tradingagents.agents.managers.portfolio_manager import create_portfolio_manager
+from tradingagents.agents.managers.asset_manager import create_asset_manager
 
 _SEP = TradingMemoryLog._SEPARATOR
 
-DECISION_BUY = "Rating: Buy\nEnter at $189-192, 6% portfolio cap."
+DECISION_BUY = "Rating: Buy\nEnter at $189-192, 6% position cap."
 DECISION_OVERWEIGHT = (
     "Rating: Overweight\n"
     "Executive Summary: Moderate position, await confirmation.\n"
@@ -58,8 +58,8 @@ def _price_df(prices):
     return pd.DataFrame({"Close": prices})
 
 
-def _make_pm_state(past_context=""):
-    """Minimal AgentState dict for portfolio_manager_node."""
+def _make_am_state(past_context=""):
+    """Minimal AgentState dict for asset_manager_node."""
     return {
         "company_of_interest": "NVDA",
         "past_context": past_context,
@@ -83,13 +83,13 @@ def _make_pm_state(past_context=""):
     }
 
 
-def _structured_pm_llm(captured: dict, decision: PortfolioDecision | None = None):
+def _structured_am_llm(captured: dict, decision: AssetDecision | None = None):
     """Build a MagicMock LLM whose with_structured_output binding captures the
-    prompt and returns a real PortfolioDecision (so render_pm_decision works).
+    prompt and returns a real AssetDecision (so render_asset_decision works).
     """
     if decision is None:
-        decision = PortfolioDecision(
-            rating=PortfolioRating.HOLD,
+        decision = AssetDecision(
+            rating=AssetRating.HOLD,
             executive_summary="Hold the position; await catalyst.",
             investment_thesis="Balanced view; neither side carried the debate.",
         )
@@ -656,10 +656,10 @@ class TestDeferredReflection:
 
 
 # ---------------------------------------------------------------------------
-# Portfolio Manager injection: past_context in state and prompt
+# Asset Manager injection: past_context in state and prompt
 # ---------------------------------------------------------------------------
 
-class TestPortfolioManagerInjection:
+class TestAssetManagerInjection:
 
     # past_context in initial state
 
@@ -674,41 +674,41 @@ class TestPortfolioManagerInjection:
         state = propagator.create_initial_state("NVDA", "2026-01-10")
         assert state["past_context"] == ""
 
-    # PM prompt
+    # AM prompt
 
-    def test_pm_prompt_includes_past_context(self):
+    def test_am_prompt_includes_past_context(self):
         captured = {}
-        llm = _structured_pm_llm(captured)
-        pm_node = create_portfolio_manager(llm)
-        state = _make_pm_state(past_context="[2026-01-05 | NVDA | Buy | +5.0% | +2.0% | 5d]\nGreat call.")
-        pm_node(state)
+        llm = _structured_am_llm(captured)
+        am_node = create_asset_manager(llm)
+        state = _make_am_state(past_context="[2026-01-05 | NVDA | Buy | +5.0% | +2.0% | 5d]\nGreat call.")
+        am_node(state)
         assert "Lessons from prior decisions and outcomes" in captured["prompt"]
         assert "Great call." in captured["prompt"]
 
-    def test_pm_no_past_context_no_section(self):
-        """PM prompt omits the lessons section entirely when past_context is empty."""
+    def test_am_no_past_context_no_section(self):
+        """AM prompt omits the lessons section entirely when past_context is empty."""
         captured = {}
-        llm = _structured_pm_llm(captured)
-        pm_node = create_portfolio_manager(llm)
-        state = _make_pm_state(past_context="")
-        pm_node(state)
+        llm = _structured_am_llm(captured)
+        am_node = create_asset_manager(llm)
+        state = _make_am_state(past_context="")
+        am_node(state)
         assert "Lessons from prior decisions" not in captured["prompt"]
 
-    def test_pm_returns_rendered_markdown_with_rating(self):
-        """The structured PortfolioDecision is rendered to markdown that
+    def test_am_returns_rendered_markdown_with_rating(self):
+        """The structured AssetDecision is rendered to markdown that
         downstream consumers (memory log, signal processor, CLI display)
         can parse without any extra LLM call."""
         captured = {}
-        decision = PortfolioDecision(
-            rating=PortfolioRating.OVERWEIGHT,
+        decision = AssetDecision(
+            rating=AssetRating.OVERWEIGHT,
             executive_summary="Build position gradually over the next two weeks.",
             investment_thesis="AI capex cycle remains intact; institutional flows constructive.",
             price_target=215.0,
             time_horizon="3-6 months",
         )
-        llm = _structured_pm_llm(captured, decision)
-        pm_node = create_portfolio_manager(llm)
-        result = pm_node(_make_pm_state())
+        llm = _structured_am_llm(captured, decision)
+        am_node = create_asset_manager(llm)
+        result = am_node(_make_am_state())
         md = result["final_trade_decision"]
         assert "**Rating**: Overweight" in md
         assert "**Executive Summary**: Build position gradually" in md
@@ -716,7 +716,7 @@ class TestPortfolioManagerInjection:
         assert "**Price Target**: 215.0" in md
         assert "**Time Horizon**: 3-6 months" in md
 
-    def test_pm_falls_back_to_freetext_when_structured_unavailable(self):
+    def test_am_falls_back_to_freetext_when_structured_unavailable(self):
         """If a provider does not support with_structured_output, the agent
         falls back to a plain invoke and returns whatever prose the model
         produced, so the pipeline never blocks."""
@@ -724,8 +724,8 @@ class TestPortfolioManagerInjection:
         llm = MagicMock()
         llm.with_structured_output.side_effect = NotImplementedError("provider unsupported")
         llm.invoke.return_value = MagicMock(content=plain_response)
-        pm_node = create_portfolio_manager(llm)
-        result = pm_node(_make_pm_state())
+        am_node = create_asset_manager(llm)
+        result = am_node(_make_am_state())
         assert result["final_trade_decision"] == plain_response
 
     # get_past_context ordering and limits
@@ -772,7 +772,7 @@ class TestPortfolioManagerInjection:
     # Full A→B→C integration cycle
 
     def test_full_cycle_store_resolve_inject(self, tmp_path):
-        """store pending → resolve with outcome → past_context non-empty for PM."""
+        """store pending → resolve with outcome → past_context non-empty for AM."""
         log = make_log(tmp_path)
         log.store_decision("NVDA", "2026-01-05", DECISION_BUY)
         assert len(log.get_pending_entries()) == 1
@@ -807,12 +807,12 @@ class TestLegacyRemoval:
         """TradingAgentsGraph must not expose reflect_and_remember."""
         assert not hasattr(TradingAgentsGraph, "reflect_and_remember")
 
-    def test_portfolio_manager_no_memory_param(self):
-        """create_portfolio_manager accepts only llm; passing memory= raises TypeError."""
+    def test_asset_manager_no_memory_param(self):
+        """create_asset_manager accepts only llm; passing memory= raises TypeError."""
         mock_llm = MagicMock()
-        create_portfolio_manager(mock_llm)
+        create_asset_manager(mock_llm)
         with pytest.raises(TypeError):
-            create_portfolio_manager(mock_llm, memory=MagicMock())
+            create_asset_manager(mock_llm, memory=MagicMock())
 
     def test_full_pipeline_no_regression(self, tmp_path):
         """propagate() completes and stores the decision after the redesign."""

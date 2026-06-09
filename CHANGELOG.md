@@ -18,6 +18,7 @@ Breaking changes within the 0.x line are called out explicitly.
 
 ### Changed
 
+- **Portfolio → asset terminology (breaking).** Renamed portfolio-level names to reflect per-ticker (`propagate(ticker, date)`) decisions: `Portfolio Manager` → `Asset Manager`, `PortfolioDecision` → `AssetDecision`, `PortfolioRating` → `AssetRating`, `create_portfolio_manager` → `create_asset_manager`, `render_pm_decision` → `render_asset_decision`, LangGraph node ID `"Portfolio Manager"` → `"Asset Manager"`, CLI team label `Portfolio Management` → `Asset Management`, saved report folder `5_portfolio/` → `5_asset/`. No deprecated aliases.
 - MiniMax `reasoning_split` sent via `extra_body`
 - yfinance MultiIndex / older-version compatibility in `stockstats_utils`
 - Trader schema: single numeric `entry_price` / `stop_loss`
@@ -27,7 +28,7 @@ Breaking changes within the 0.x line are called out explicitly.
 ### Fixed
 
 - Technical indicator lookup uses latest row up to `curr_date`
-- **Debug streaming spam** — with `debug=True`, the graph no longer re-prints the same `messages[-1]` on every step; skips `"Continue"` placeholders and prints Research Manager / Portfolio Manager output from node update deltas (those agents write to state fields, not `messages`)
+- **Debug streaming spam** — with `debug=True`, the graph no longer re-prints the same `messages[-1]` on every step; skips `"Continue"` placeholders and prints Research Manager / Asset Manager output from node update deltas (those agents write to state fields, not `messages`)
 
 ## [0.2.5] — 2026-05-11
 

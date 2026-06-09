@@ -26,7 +26,7 @@ def get_language_instruction() -> str:
     Returns empty string when English (default), so no extra tokens are used.
     Applied to every agent whose output reaches the saved report —
     analysts, researchers, debaters, research manager, trader, and
-    portfolio manager — so a non-English run produces a fully localized
+    asset manager — so a non-English run produces a fully localized
     report rather than a mix of languages.
     """
     from tradingagents.dataflows.config import get_config
