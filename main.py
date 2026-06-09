@@ -15,9 +15,10 @@ config = DEFAULT_CONFIG.copy()
 ta = TradingAgentsGraph(debug=True, config=config)
 
 # forward propagate
-_, decision = ta.propagate("NVDA", "2024-05-22") # -: Hua Congyi
-# _, decision = ta.propagate("AAPL", "2026-05-22") # +: Hua Congyi
+# _, decision = ta.propagate("NVDA", "2024-05-22") # -: Hua Congyi
+_, decision = ta.propagate("NVDA", "2026-06-09") # +: Hua Congyi
 print(decision)
+ta.print_node_timing_report()
 
 # Memorize mistakes and reflect
 # ta.reflect_and_remember(1000) # parameter is the position returns

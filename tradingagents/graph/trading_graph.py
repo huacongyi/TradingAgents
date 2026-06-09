@@ -41,6 +41,7 @@ from tradingagents.agents.utils.agent_utils import (
 
 from .checkpointer import checkpoint_step, clear_checkpoint, get_checkpointer, thread_id
 from .conditional_logic import ConditionalLogic
+from .node_timing import NodeTimingTracker
 from .setup import GraphSetup
 from .propagation import Propagator
 from .reflection import Reflector
@@ -131,6 +132,7 @@ class TradingAgentsGraph:
         self.workflow = self.graph_setup.setup_graph(selected_analysts)
         self.graph = self.workflow.compile()
         self._checkpointer_ctx = None
+        self.node_timing = NodeTimingTracker()
 
     def _get_provider_kwargs(self) -> Dict[str, Any]:
         """Get provider-specific kwargs for LLM client creation."""
@@ -343,21 +345,49 @@ class TradingAgentsGraph:
             tid = thread_id(company_name, str(trade_date))
             args.setdefault("config", {}).setdefault("configurable", {})["thread_id"] = tid
 
-        if self.debug:
-            trace = []
-            for chunk in self.graph.stream(init_agent_state, **args):
-                if len(chunk["messages"]) == 0:
-                    pass
-                else:
-                    chunk["messages"][-1].pretty_print()
-                    trace.append(chunk)
-            # Streamed chunks are per-node deltas. Merge them so the returned
-            # state matches what graph.invoke() yields in the non-debug path.
-            final_state = {}
-            for chunk in trace:
-                final_state.update(chunk)
-        else:
-            final_state = self.graph.invoke(init_agent_state, **args)
+        self.node_timing.reset()
+        self.node_timing.start_run()
+
+        prev_msg_id = None
+        prev_msg_len = 0
+        final_state = {}
+        stream_args = {**args, "stream_mode": ["updates", "values"]}
+        for mode, chunk in self.graph.stream(init_agent_state, **stream_args):
+            if mode == "updates":
+                for node_name, node_delta in chunk.items():
+                    self.node_timing.record_update(node_name)
+                    if not self.debug or not isinstance(node_delta, dict):
+                        continue
+                    if node_name == "Portfolio Manager":
+                        decision = node_delta.get("final_trade_decision")
+                        if decision:
+                            print("================================== Ai Message ==================================")
+                            print()
+                            print(decision)
+                    elif node_name == "Research Manager":
+                        plan = node_delta.get("investment_plan")
+                        if plan:
+                            print("================================== Ai Message ==================================")
+                            print()
+                            print(plan)
+                continue
+
+            final_state = chunk
+            if not self.debug:
+                continue
+
+            msgs = chunk.get("messages", [])
+            if not msgs:
+                continue
+            last = msgs[-1]
+            last_id = getattr(last, "id", None)
+            msg_len = len(msgs)
+            new_msg = last_id != prev_msg_id or msg_len != prev_msg_len
+            prev_msg_id = last_id
+            prev_msg_len = msg_len
+            content = getattr(last, "content", "") or ""
+            if new_msg and content.strip() != "Continue":
+                last.pretty_print()
 
         # Store current state for reflection.
         self.curr_state = final_state
@@ -425,3 +455,7 @@ class TradingAgentsGraph:
     def process_signal(self, full_signal):
         """Process a signal to extract the core decision."""
         return self.signal_processor.process_signal(full_signal)
+
+    def print_node_timing_report(self) -> None:
+        """Print per-execution node timing records for the last graph run."""
+        self.node_timing.print_report()

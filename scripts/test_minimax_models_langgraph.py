@@ -118,7 +118,8 @@ def main() -> int:
         print("The API calls will likely fail.")
 
     models_to_test = [
-        "MiniMax-M2.7",
+        # "MiniMax-M2.7",
+        "MiniMax-M3",
     ]
 
     results = [test_model_with_langgraph(model) for model in models_to_test]

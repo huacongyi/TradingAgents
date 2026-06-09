@@ -138,6 +138,15 @@ from tradingagents.minimax_cn_config import DEFAULT_CONFIG
 
 Override models and debate rounds via config or `TRADINGAGENTS_*` env vars. See `tradingagents/default_config.py`.
 
+### Node timing (study fork)
+
+Each graph run records per-execution wall-clock time for every node (analysts, tool nodes, message-clear nodes, debators, managers). Call `print_node_timing_report()` after `propagate()` to print a timing table — useful for spotting slow LLM calls vs. data-fetch steps.
+
+```python
+_, decision = ta.propagate("NVDA", "2026-06-09")
+ta.print_node_timing_report()
+```
+
 ## Persistence and Recovery
 
 - **Decision log** — append-only at `~/.tradingagents/memory/trading_memory.md` (`TRADINGAGENTS_MEMORY_LOG_PATH` to override)
