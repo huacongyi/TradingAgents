@@ -19,7 +19,7 @@ so that:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -233,4 +233,102 @@ def render_asset_decision(decision: AssetDecision) -> str:
         parts.extend(["", f"**Price Target**: {decision.price_target}"])
     if decision.time_horizon:
         parts.extend(["", f"**Time Horizon**: {decision.time_horizon}"])
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Portfolio Manager
+# ---------------------------------------------------------------------------
+
+
+class PortfolioOrderSide(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class PortfolioOrder(BaseModel):
+    """A single LIMIT order with integer share quantity."""
+
+    ticker_symbol: str = Field(description="Ticker symbol, e.g. NVDA or AAPL.")
+    side: PortfolioOrderSide = Field(description="BUY or SELL.")
+    quantity: int = Field(ge=1, description="Exact whole shares to trade.")
+    price: float = Field(gt=0, description="LIMIT price in the instrument's quote currency.")
+    type: Literal["LIMIT"] = Field(default="LIMIT", description="Order type; always LIMIT.")
+    duration: Literal["GOOD_TILL_CANCEL"] = Field(
+        default="GOOD_TILL_CANCEL",
+        description="Order duration; always GOOD_TILL_CANCEL.",
+    )
+
+
+class WorkingOrderAction(BaseModel):
+    """Action to take on an existing working order."""
+
+    ticker_symbol: str = Field(description="Ticker of the working order to act on.")
+    action: Literal["KEEP", "CANCEL", "REPLACE"] = Field(
+        description=(
+            "KEEP to leave the working order unchanged, CANCEL to remove it, "
+            "or REPLACE to cancel and substitute with replacement."
+        ),
+    )
+    replacement: Optional[PortfolioOrder] = Field(
+        default=None,
+        description="Required when action is REPLACE; the new order to submit.",
+    )
+
+
+class PortfolioTradingPlan(BaseModel):
+    """Portfolio-level trading plan produced by the Portfolio Manager."""
+
+    executive_summary: str = Field(
+        description=(
+            "Concise summary of today's portfolio actions, cash usage, "
+            "and rationale for working-order changes. Two to four sentences."
+        ),
+    )
+    working_order_actions: list[WorkingOrderAction] = Field(
+        default_factory=list,
+        description=(
+            "One entry per existing working order. Reconcile each against "
+            "today's per-ticker analysis (KEEP / CANCEL / REPLACE)."
+        ),
+    )
+    orders: list[PortfolioOrder] = Field(
+        default_factory=list,
+        description=(
+            "New orders to place today (excluding replacements, which belong "
+            "in working_order_actions). Integer shares only; LIMIT / GTC."
+        ),
+    )
+
+
+def _render_order(order: PortfolioOrder) -> str:
+    return (
+        f"- **{order.ticker_symbol}** {order.side.value} "
+        f"{order.quantity} @ ${order.price:.2f} ({order.type}, {order.duration})"
+    )
+
+
+def render_portfolio_trading_plan(plan: PortfolioTradingPlan) -> str:
+    """Render a PortfolioTradingPlan to markdown for display and logging."""
+    parts = [
+        f"**Executive Summary**: {plan.executive_summary}",
+        "",
+        "**Working Order Actions**:",
+    ]
+    if plan.working_order_actions:
+        for action in plan.working_order_actions:
+            line = f"- **{action.ticker_symbol}**: {action.action}"
+            if action.action == "REPLACE" and action.replacement:
+                line += f" → {_render_order(action.replacement).lstrip('- ')}"
+            parts.append(line)
+    else:
+        parts.append("- (none)")
+
+    parts.extend(["", "**New Orders**:"])
+    if plan.orders:
+        for order in plan.orders:
+            parts.append(_render_order(order))
+    else:
+        parts.append("- (none)")
+
     return "\n".join(parts)

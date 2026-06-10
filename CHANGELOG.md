@@ -15,6 +15,13 @@ Breaking changes within the 0.x line are called out explicitly.
 - LangGraph smoke scripts for Gemini, MiniMax CN, and NVIDIA MiniMax
 - `test_openai_third_party_backend.py`
 - **Node execution timing** — `NodeTimingTracker` records wall-clock duration per graph node run (including tool nodes and message-clear nodes); `TradingAgentsGraph.print_node_timing_report()` prints a numbered table after each pipeline run
+- **PortfolioTradingGraph** — portfolio-level LangGraph with a single **Portfolio Manager** node (distinct from the per-ticker **Asset Manager**). After per-ticker `propagate()` runs, reads `full_states_log_{date}.json` for each symbol and produces a portfolio trading plan with integer-share LIMIT / GTC orders
+- Portfolio schemas — `PortfolioOrder`, `WorkingOrderAction`, `PortfolioTradingPlan`, plus `render_portfolio_trading_plan()`
+- `portfolio_utils.py` — `load_ticker_decisions`, `compute_cash_budget`, `enforce_portfolio_constraints` (deterministic cash and position clamps after the LLM plan)
+- Working-order reconciliation — Portfolio Manager sets KEEP / CANCEL / REPLACE per pending order against today's per-ticker ratings
+- Portfolio plan logs at `~/.tradingagents/logs/portfolio/PortfolioTrading_logs/portfolio_plan_{date}.json`
+- **`invoke_structured_model()`** — MiniMax-safe structured-output recovery: salvages tool-call arguments when LangChain's parser returns `parsed=None`, with one retry nudge
+- `tests/test_portfolio_utils.py`, `tests/test_structured_recovery.py`
 
 ### Changed
 
@@ -24,6 +31,7 @@ Breaking changes within the 0.x line are called out explicitly.
 - Trader schema: single numeric `entry_price` / `stop_loss`
 - Model catalog: `minimaxai/minimax-m2.7` (OpenAI), `gemini-3.1-flash-lite` (Google)
 - `_run_graph` always streams with `stream_mode=["updates", "values"]` so timing works in both debug and non-debug paths
+- **`main.py`** — multi-ticker propagate loop (skips symbols whose log already exists for `today`), then runs `PortfolioTradingGraph.propagate()` with portfolio, working orders, and account balances
 
 ### Fixed
 

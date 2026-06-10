@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any, Dict, List
 from typing_extensions import TypedDict
 from langgraph.graph import MessagesState
 
@@ -71,3 +71,17 @@ class AgentState(MessagesState):
     ]
     final_trade_decision: Annotated[str, "Final decision made by the Risk Analysts"]
     past_context: Annotated[str, "Memory log context injected at run start (same-ticker decisions + cross-ticker lessons)"]
+
+
+class PortfolioState(TypedDict):
+    trade_date: Annotated[str, "Trade date for the portfolio plan"]
+    symbols: Annotated[List[str], "Ticker symbols in scope for trading"]
+    portfolio: Annotated[List[Dict[str, Any]], "Current holdings"]
+    working_orders: Annotated[List[Dict[str, Any]], "Pending working orders"]
+    account_balances: Annotated[Dict[str, Any], "Account cash and net liquidation"]
+    ticker_decisions: Annotated[
+        List[Dict[str, Any]],
+        "Per-ticker analysis loaded from logs",
+    ]
+    portfolio_trading_plan: Annotated[str, "Rendered portfolio trading plan markdown"]
+    structured_plan: Annotated[Any, "Parsed PortfolioTradingPlan instance"]

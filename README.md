@@ -71,7 +71,11 @@ Turns research into a concrete buy/sell/hold proposal with optional price levels
 
 ### Risk Management and Asset Manager
 
-Risk debaters stress-test the proposal; the Asset Manager approves or rejects the trade.
+Risk debaters stress-test the proposal; the **Asset Manager** approves or rejects the trade for each ticker.
+
+### Portfolio Manager (study fork)
+
+After per-ticker analysis, **PortfolioTradingGraph** synthesises a portfolio-level plan from saved logs, current holdings, working orders, and cash. The **Portfolio Manager** (separate from the per-ticker Asset Manager) reconciles pending orders (KEEP / CANCEL / REPLACE) and proposes new integer-share LIMIT / GTC orders within cash and position limits.
 
 ## Installation and CLI
 
@@ -147,10 +151,33 @@ _, decision = ta.propagate("NVDA", "2026-06-09")
 ta.print_node_timing_report()
 ```
 
+### Portfolio trading plan (study fork)
+
+Run per-ticker analysis first (each ticker writes `full_states_log_{date}.json` under `results_dir`). Then aggregate with `PortfolioTradingGraph`:
+
+```python
+from tradingagents.graph.portfolio_trading_graph import PortfolioTradingGraph
+from tradingagents.agents.schemas import render_portfolio_trading_plan
+
+ptg = PortfolioTradingGraph(debug=True, config=config)
+_, plan = ptg.propagate(
+    trade_date="2026-06-09",
+    symbols={"NVDA", "AAPL", "TSLA"},
+    portfolio=[{"ticker_symbol": "NVDA", "trade_price": 201.83, "quantity": 3}],
+    working_orders=[{"ticker_symbol": "NVDA", "side": "BUY", "quantity": 1, "price": 190.0,
+                     "type": "LIMIT", "duration": "GOOD_TILL_CANCEL"}],
+    account_balances={"net_liquidation": 10000, "cash": 7870.81},
+)
+print(render_portfolio_trading_plan(plan))
+```
+
+Plans are saved to `~/.tradingagents/logs/portfolio/PortfolioTrading_logs/portfolio_plan_{date}.json`. See [`main.py`](main.py) for the full multi-ticker workflow.
+
 ## Persistence and Recovery
 
 - **Decision log** — append-only at `~/.tradingagents/memory/trading_memory.md` (`TRADINGAGENTS_MEMORY_LOG_PATH` to override)
 - **Checkpoint resume** — opt-in via `--checkpoint`; state under `~/.tradingagents/cache/checkpoints/`
+- **Portfolio plans** — `~/.tradingagents/logs/portfolio/PortfolioTrading_logs/portfolio_plan_{date}.json`
 
 ## Citation
 
